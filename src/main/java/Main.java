@@ -1,11 +1,13 @@
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.RichFlatMapFunction;
+import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.io.RowCsvInputFormat;
-import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -44,71 +46,8 @@ public class Main {
                 // https://blog.csdn.net/qq_37555071/article/details/122415430
                 // for reference to global which means N->1
                 .global();
-//        bursty.print();
-//                .process();
-//                .aggregate(new AggregateFunction<FeatureOccurrence, Bursty, Bursty>() {
-//                    @Override
-//                    public Bursty createAccumulator() {
-//                        return new Bursty();
-//                    }
-//
-//                    @Override
-//                    public Bursty add(FeatureOccurrence feature, Bursty bur) {
-//                        if (bur.occurrence.containsKey(feature.date)) {
-//                            bur.occurrence.get(feature.date).add(feature.documentId);
-//                        } else {
-//                            List<String> documentList = new ArrayList<>();
-//                            documentList.add(feature.documentId);
-//                            bur.occurrence.put(feature.date, documentList);
-//                        }
-//                        return bur;
-//                    }
-//
-//                    @Override
-//                    public Bursty merge(Bursty bur0, Bursty bur1) {
-//                        if (bur0.occurrence.size() < bur1.occurrence.size()) {
-//                            for (String date : bur0.occurrence.keySet()) {
-//                                if (bur1.occurrence.containsKey(date)) {
-//                                    bur1.occurrence.get(date).addAll(bur0.occurrence.get(date));
-//                                } else {
-//                                    bur1.occurrence.put(date, bur0.occurrence.get(date));
-//                                }
-//                            }
-//                            return bur1;
-//                        } else {
-//                            for (String date : bur1.occurrence.keySet()) {
-//                                if (bur0.occurrence.containsKey(date)) {
-//                                    bur0.occurrence.get(date).addAll(bur1.occurrence.get(date));
-//                                } else {
-//                                    bur0.occurrence.put(date, bur1.occurrence.get(date));
-//                                }
-//                            }
-//                            return bur0;
-//                        }
-//                    }
-//
-//                    @Override
-//                    public Bursty getResult(Bursty bur) {
-//                        return bur;
-//                    }
-//                });
+        bursty.flatMap(new Feature2Event());
 
-//        counts.process(new ProcessFunction<Bursty, Bursty>() {
-//            @Override
-//            public void processElement(Bursty bur, Context context, Collector<Bursty> collector) throws Exception {
-//                collector.collect(bur);
-//                System.out.println(bur.keyword);
-//                bur.occurList.sort(new Comparator<Occurrence>() {
-//                    @Override
-//                    public int compare(Occurrence o1, Occurrence o2) {
-//                        return o1.date.compareTo(o2.date);
-//                    }
-//                });
-//                for (Occurrence occur : bur.occurList) {
-//                    System.out.println(occur.documentid + ',' + occur.date);
-//                }
-//            }
-//        }).name("calculate value");
 
         // Apache Flink applications are composed lazily. Calling execute
         // submits the Job and begins processing.
@@ -138,6 +77,24 @@ public class Main {
             for (String keyword : keywordList) {
                 out.collect(new FeatureOccurrence(keyword, id, date));
             }
+        }
+    }
+
+    public static final class Feature2Event
+            extends RichFlatMapFunction<Bursty, Event> {
+
+        private ListState<Bursty> bursty;
+
+        @Override
+        public void open(Configuration parameters) {
+            bursty = getRuntimeContext().getListState(new ListStateDescriptor<Bursty>("myBursty", Bursty.class));
+        }
+
+        @Override
+        public void flatMap(Bursty bur, Collector<Event> out) throws Exception {
+
+            bursty.add(bur);
+
         }
     }
 
@@ -186,10 +143,10 @@ public class Main {
                 Collector<Bursty> out) throws Exception {
             BurstyWithTimeStamp bur = state.value();
             if (timestamp == bur.lastModified + 10000) {
-                System.out.println(bur.keyword);
-                for (String date : bur.occurrence.keySet()) {
-                    System.out.println(date + ": " + String.join(", ", bur.occurrence.get(date)));
-                }
+//                System.out.println(bur.keyword);
+//                for (String date : bur.occurrence.keySet()) {
+//                    System.out.println(date + ": " + String.join(", ", bur.occurrence.get(date)));
+//                }
                 out.collect(new Bursty(bur.keyword, bur.occurrence));
             }
         }
