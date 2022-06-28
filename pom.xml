@@ -30,9 +30,7 @@ under the License.
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <flink.version>1.15.0</flink.version>
         <target.java.version>11</target.java.version>
-        <scala.binary.version>2.12</scala.binary.version>
         <maven.compiler.source>${target.java.version}</maven.compiler.source>
         <maven.compiler.target>${target.java.version}</maven.compiler.target>
         <log4j.version>2.17.1</log4j.version>
@@ -53,25 +51,8 @@ under the License.
     </repositories>
 
     <dependencies>
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-walkthrough-common</artifactId>
-            <version>${flink.version}</version>
-        </dependency>
 
-        <!-- This dependency is provided, because it should not be packaged into the JAR file. -->
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-streaming-java</artifactId>
-            <version>${flink.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-clients</artifactId>
-            <version>${flink.version}</version>
-            <scope>provided</scope>
-        </dependency>
+
 
         <!-- Add connector dependencies here. They must be in the default scope (compile). -->
 
@@ -111,9 +92,10 @@ under the License.
         </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>
-            <artifactId>flink-table-uber-blink_2.12</artifactId>
-            <version>1.16-SNAPSHOT</version>
+            <artifactId>flink-clients_2.12</artifactId>
+            <version>1.14.4</version>
         </dependency>
+
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-connector-files</artifactId>

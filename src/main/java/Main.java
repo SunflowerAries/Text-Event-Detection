@@ -32,7 +32,7 @@ public class Main {
                 // https://blog.csdn.net/qq_37555071/article/details/122415430
                 // for reference to global which means N->1
                 .global();
-        bursty.flatMap(new Feature2Event());
+        bursty.keyBy(b -> "global").flatMap(new Feature2Event()).print();
 
         env.execute("BurstyEventDetection");
     }

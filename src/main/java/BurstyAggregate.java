@@ -57,9 +57,9 @@ public class BurstyAggregate extends KeyedProcessFunction<String, FeatureOccurre
             out.collect(new Feature(bur.word, bur.occurrence));
         }
         if (timestamp == bur.lastModified + 1000) {
-            System.out.println(bur.word);
+//            System.out.println(bur.word);
             for (String date : bur.occurrence.keySet()) {
-                System.out.println(date + ": " + String.join(", ", bur.occurrence.get(date)));
+//                System.out.println(date + ": " + String.join(", ", bur.occurrence.get(date)));
             }
 //            out.collect(new Feature(bur.word, bur.occurrence));
         }
