@@ -1,6 +1,6 @@
 import csv, re
 
-with open("../../data/test.csv", 'r') as f, open("../../data/refine.csv", 'w') as fa:
+with open("main/resources/test.csv", 'r') as f, open("main/resources/refine.csv", 'w') as fa:
     cr = csv.reader(f)
     next(cr, None)
     for row in cr:
