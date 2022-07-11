@@ -13,6 +13,14 @@ public class FeatureOccurrence {
         this.timeStamp = timeStamp;
     }
 
+    public String getWord() {
+        return word;
+    }
+
+    public String getDocumentId() {
+        return documentId;
+    }
+
     @Override
     public String toString() {
         return "FeatureOccurrence{" +
