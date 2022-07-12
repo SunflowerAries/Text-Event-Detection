@@ -40,12 +40,6 @@ public class Main {
                 .apply(new BurstyProcess()).name("BurstyProcess");
 
         bursty.keyBy(b -> "global_f2e").flatMap(new Feature2Event()).print();
-
-//        bursty.keyBy(b -> "global").
-//                flatMap(new Feature2Event()).
-//                print();
-//        bursty.print();
-
         env.execute("BurstyEventDetection");
     }
 }

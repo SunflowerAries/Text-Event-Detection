@@ -3,9 +3,6 @@ import model.FeatureOccurrence;
 import model.Feature;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
-import org.apache.flink.api.common.state.ValueState;
-import org.apache.flink.api.common.typeinfo.Types;
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.windowing.RichWindowFunction;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
@@ -17,13 +14,8 @@ import java.util.stream.StreamSupport;
 
 public class BurstyProcess extends RichWindowFunction<FeatureOccurrence, Feature, String,TimeWindow> {
     private MapState<String, Integer> date2DocNum;
-    private MapState<String, List<String>> date2Words;
-    private MapState<String, Tuple2<String, Integer>> word2Pair; // Pair(date, doc_num)
-    private MapState<String, List<String>> word2Docs;
     private MapState<String, Feature> word2Feature;
-
-    //    private MapState<String, FeatureInfo> word2Info;
-    private ValueState<String> curDate; // current date
+    private int coldDownDays = 7;
 
     @Override
     public void open(Configuration parameters) throws Exception {
@@ -33,18 +25,6 @@ public class BurstyProcess extends RichWindowFunction<FeatureOccurrence, Feature
                         String.class,
                         Integer.class
                 );
-        MapStateDescriptor<String, List<String>> date2WordsDes =
-                new MapStateDescriptor<String, List<String>>(
-                        "date2WordsDes",
-                        Types.STRING,
-                        Types.LIST(Types.STRING)
-                );
-        MapStateDescriptor<String, List<String>> wordsDocsDes =
-                new MapStateDescriptor<String, List<String>>(
-                        "date2WordsDes",
-                        Types.STRING,
-                        Types.LIST(Types.STRING)
-                );
         MapStateDescriptor<String, Feature> word2FeatureDes =
                 new MapStateDescriptor<String, Feature>(
                         "date2WordsDes",
@@ -53,8 +33,6 @@ public class BurstyProcess extends RichWindowFunction<FeatureOccurrence, Feature
                 );
 
         date2DocNum = getRuntimeContext().getMapState(date2DocNumDes);
-        date2Words = getRuntimeContext().getMapState(date2WordsDes);
-        word2Docs = getRuntimeContext().getMapState(wordsDocsDes);
         word2Feature = getRuntimeContext().getMapState(word2FeatureDes);
     }
 
@@ -74,13 +52,14 @@ public class BurstyProcess extends RichWindowFunction<FeatureOccurrence, Feature
             if(date == null) date = entry.getValue().get(0).date;
         }
         int N = docs.size();
-        Integer dd = date2DocNum.get(date);
-        if(dd != null){
-            System.err.println("previous " + date + " is not null!!!");
+        Integer docNum = date2DocNum.get(date);
+        if(docNum != null){
+            System.err.println("previous " + date + " has existed!!!");
+//            throw new RuntimeException();
+            return;
         }
         date2DocNum.put(date, N);
-
-        // TODO: cold down days
+        coldDownDays--;
         for (String w: w2FO.keySet()){ // all words in current date
             // update map
             Feature f = word2Feature.get(w) ;
@@ -92,14 +71,13 @@ public class BurstyProcess extends RichWindowFunction<FeatureOccurrence, Feature
             // bursty features judgement based on Feature object
             int n = ds.size();
             int avgDocNum = (int) StreamSupport.stream(date2DocNum.values().spliterator(),true).mapToInt(Integer::intValue).average().getAsDouble();
-            double p = f.get_p(date2DocNum.entries()); // TODO: only window that contains feature
+            double p = f.get_p(date2DocNum.entries());
 
+            // cold down to get enough static data
+            if (coldDownDays > 0) continue;
             if (!f.isStopword(avgDocNum, p) && BurstyProb.calc(N, n, p) > 1e-6){
                 out.collect(f);
             }
-
         }
-
-
     }
 }
