@@ -24,9 +24,7 @@ public class Feature {
         double p = 0.0;
         int i = 0;
         for(Map.Entry<String,Integer> e:iter){
-            if(occurrence.get(e.getKey()) == null){
-                System.err.println("bug is here");
-            }
+            if(occurrence.get(e.getKey()) == null) continue;
             p += occurrence.get(e.getKey()).size() * 1.0 / e.getValue();
             i++;
         }

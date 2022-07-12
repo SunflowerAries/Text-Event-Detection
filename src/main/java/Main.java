@@ -18,7 +18,7 @@ public class Main {
     public static void main(String[] args) throws Exception {
 
         Configuration conf = new Configuration();
-        conf.setString("taskmanager.memory.network.max", "1gb"); // insufficient buffer error
+        conf.setString("taskmanager.memory.network.max", "1gb"); // insufficient buffer error (too many words as key)
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
         env.setRuntimeMode(RuntimeExecutionMode.BATCH);
@@ -35,23 +35,17 @@ public class Main {
                         .withTimestampAssigner((SerializableTimestampAssigner<FeatureOccurrence>)(element, recordTimestamp) -> element.timeStamp))
                 .name("document->feature");
 
-        DataStream<Feature> bursty = source.keyBy(b->"global")
+        DataStream<Feature> bursty = source.keyBy(b->"global_occur")
                 .window(TumblingEventTimeWindows.of(Time.days(1)))
                 .apply(new BurstyProcess()).name("BurstyProcess");
-//        DataStream<Feature> bursty = source
-//                .keyBy(value -> value.word)
-//                .process(new BurstyAggregate())
-//                .name("burstyaggregate")
-//                // https://blog.csdn.net/qq_37555071/article/details/122415430
-//                // for reference to global which means N->1
-//                .global();
-//        bursty.keyBy(b -> "global").flatMap(new Feature2Event()).print();
+
+        bursty.keyBy(b -> "global_f2e").flatMap(new Feature2Event()).print();
 
 //        bursty.keyBy(b -> "global").
 //                flatMap(new Feature2Event()).
 //                print();
+//        bursty.print();
 
-        bursty.print();
         env.execute("BurstyEventDetection");
     }
 }
