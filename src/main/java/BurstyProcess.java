@@ -1,6 +1,6 @@
 import lib.BurstyProb;
-import model.FeatureOccurrence;
 import model.Feature;
+import model.FeatureOccurrence;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.configuration.Configuration;
@@ -8,6 +8,8 @@ import org.apache.flink.streaming.api.functions.windowing.RichWindowFunction;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -15,6 +17,7 @@ import java.util.stream.StreamSupport;
 public class BurstyProcess extends RichWindowFunction<FeatureOccurrence, Feature, String,TimeWindow> {
     private MapState<String, Integer> date2DocNum;
     private MapState<String, Feature> word2Feature;
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private int coldDownDays = 7;
 
     @Override
@@ -62,9 +65,13 @@ public class BurstyProcess extends RichWindowFunction<FeatureOccurrence, Feature
         coldDownDays--;
         for (String w: w2FO.keySet()){ // all words in current date
             // update map
-            Feature f = word2Feature.get(w) ;
+            Feature f = word2Feature.get(w);
             if(f == null) f = new Feature(w);
             HashSet<String> ds = word2DocList.get(w);
+            if (f.occurrence.size() == 7) {
+                String minus7 = LocalDate.parse(date, formatter).minusDays(7).toString();
+                f.occurrence.remove(minus7);
+            }
             f.occurrence.put(date, new HashSet<>(ds));
             word2Feature.put(w, f);
 

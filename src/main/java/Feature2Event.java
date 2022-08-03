@@ -12,10 +12,12 @@ public class Feature2Event extends RichFlatMapFunction<Feature, Event> {
 
     // for state management in flink https://juejin.cn/post/6844904053512601607
     private MapState<String, Feature> burstyMap;
+    private MapState<String, Boolean> hotEvents;
 
     @Override
     public void open(Configuration parameters) throws Exception {
         burstyMap = getRuntimeContext().getMapState(new MapStateDescriptor<String, Feature>("burstyMap", String.class, Feature.class));
+        hotEvents = getRuntimeContext().getMapState(new MapStateDescriptor<String, Boolean>("hotEvent", String.class, Boolean.class));
     }
 
     @Override
@@ -48,7 +50,10 @@ public class Feature2Event extends RichFlatMapFunction<Feature, Event> {
         }
 
         Event hotEvent = hotPeriod(events);
-        out.collect(hotEvent);
+        if (!hotEvents.contains(hotEvent.toString())) {
+            hotEvents.put(hotEvent.toString(), true);
+            out.collect(hotEvent);
+        }
     }
 
     private double evaluate(Event event, String candidate) throws Exception {
