@@ -1,6 +1,7 @@
 import lib.BurstyProb;
 import model.Feature;
 import model.FeatureOccurrence;
+import model.PerDayInfo;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.configuration.Configuration;
@@ -72,7 +73,7 @@ public class BurstyProcess extends RichWindowFunction<FeatureOccurrence, Feature
                 String minus7 = LocalDate.parse(date, formatter).minusDays(7).toString();
                 f.occurrence.remove(minus7);
             }
-            f.occurrence.put(date, new HashSet<>(ds));
+            f.occurrence.put(date, new PerDayInfo(ds));
             word2Feature.put(w, f);
 
             // bursty features judgement based on Feature object
@@ -82,7 +83,8 @@ public class BurstyProcess extends RichWindowFunction<FeatureOccurrence, Feature
 
             // cold down to get enough static data
             if (coldDownDays > 0) continue;
-            if (!f.isStopword(avgDocNum, p) && BurstyProb.calc(N, n, p) > 1e-6){
+            f.occurrence.get(date).setScore(BurstyProb.calc(N, n, p));
+            if (!f.isStopword(avgDocNum, p) && f.occurrence.get(date).getScore() > 1e-6){
                 out.collect(f);
             }
         }

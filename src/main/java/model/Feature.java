@@ -6,7 +6,7 @@ import java.util.*;
 
 public class Feature {
     public String word;
-    public HashMap<String, Set<String>> occurrence; // (date, documents<doc_id>)
+    public HashMap<String, PerDayInfo> occurrence; // (date, documents<doc_id>)
 
     public Feature() {
         this.word = null;
@@ -16,7 +16,7 @@ public class Feature {
         this.word = word;
         this.occurrence = new HashMap<>();
     }
-    public Feature(String word, HashMap<String, Set<String>> occurrence) {
+    public Feature(String word, HashMap<String, PerDayInfo> occurrence) {
         this.word = word;
         this.occurrence = occurrence;
     }
@@ -25,7 +25,7 @@ public class Feature {
         int i = 0;
         for(Map.Entry<String,Integer> e:iter){
             if(occurrence.get(e.getKey()) == null) continue;
-            p += occurrence.get(e.getKey()).size() * 1.0 / e.getValue();
+            p += occurrence.get(e.getKey()).ids.size() * 1.0 / e.getValue();
             i++;
         }
         assert occurrence.size() == i;
@@ -38,8 +38,8 @@ public class Feature {
     }
     public Set<String> documents() {
         Set<String> documents = new HashSet<>();
-        occurrence.values().forEach((Set<String> ds) -> {
-            ds.forEach(d -> documents.add(d));
+        occurrence.values().forEach(ds -> {
+            ds.ids.forEach(d -> documents.add(d));
         });
         return documents;
     }
@@ -47,13 +47,13 @@ public class Feature {
     public int count(List<String> window) {// window is a list of date
         int count = (int) occurrence.entrySet().stream()
                 .filter(entry -> window.contains(entry.getKey()))
-                .flatMap(entry -> entry.getValue().stream())
+                .flatMap(entry -> entry.getValue().ids.stream())
                 .count();
         return count;
     }
 
     public int count() {
-        int count = occurrence.values().stream().mapToInt(Set::size).sum();
+        int count = occurrence.values().stream().map(info -> info.ids).mapToInt(Set::size).sum();
         return count;
     }
 }

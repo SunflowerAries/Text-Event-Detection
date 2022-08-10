@@ -1,6 +1,7 @@
 import model.Feature;
 import model.FeatureOccurrence;
 import model.FeatureWithTimeStamp;
+import model.PerDayInfo;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.configuration.Configuration;
@@ -37,9 +38,9 @@ public class BurstyAggregate extends KeyedProcessFunction<String, FeatureOccurre
 
         // https://stackoverflow.com/questions/66925393/are-flink-stream-messages-sent-to-downstream-in-order
         if (!current.occurrence.containsKey(foccur.date)) { // not in order
-            current.occurrence.put(foccur.date, new HashSet<>());
+            current.occurrence.put(foccur.date, new PerDayInfo());
         }
-        current.occurrence.get(foccur.date).add(foccur.documentId);
+        current.occurrence.get(foccur.date).getIds().add(foccur.documentId);
 
         current.lastModified = ctx.timestamp();
         state.update(current);
