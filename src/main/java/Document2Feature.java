@@ -3,8 +3,6 @@ import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Collector;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
