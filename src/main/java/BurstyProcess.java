@@ -64,7 +64,7 @@ public class BurstyProcess extends RichWindowFunction<FeatureOccurrence, Feature
         }
         date2DocNum.put(date, N);
         coldDownDays--;
-        for (String w: w2FO.keySet()){ // all words in current date
+        for (String w: w2FO.keySet()){ // all words in current date TODO: possible bottleneck
             // update map
             Feature f = word2Feature.get(w);
             if(f == null) f = new Feature(w);

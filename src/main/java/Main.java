@@ -47,11 +47,11 @@ public class Main {
         conf.setString("taskmanager.memory.network.max", "1gb"); // insufficient buffer error (too many words as key)
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
-        env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
+        env.setRuntimeMode(RuntimeExecutionMode.BATCH);
         String filename = "refine.csv";
 
         // InputStream way
-        ArrayList<Row> ds =prepare(filename);
+        ArrayList<Row> ds = prepare(filename);
         DataStreamSource<Row> source = env.fromCollection(ds);
 
         // CSV file way: infeasible on jar
@@ -62,16 +62,16 @@ public class Main {
 //        DataStreamSource<Row> source2 = env.readFile(csvInput, inFilePath);
 
         SingleOutputStreamOperator<FeatureOccurrence> middle = source
-                .flatMap(new Document2Feature()).setParallelism(4)
+                .flatMap(new Document2Feature()).setParallelism(2)
                 .assignTimestampsAndWatermarks(WatermarkStrategy.<FeatureOccurrence>forMonotonousTimestamps()
                         .withTimestampAssigner((SerializableTimestampAssigner<FeatureOccurrence>)(element, recordTimestamp) -> element.timeStamp))
-                .name("document->feature");
+                .name("Document->Feature");
 
         DataStream<Feature> bursty = middle.keyBy(b->"global_occur")
                 .window(TumblingEventTimeWindows.of(Time.days(1)))
                 .apply(new BurstyProcess()).name("BurstyProcess");
 
-        bursty.keyBy(b -> "global_f2e").flatMap(new Feature2Event()).print();
+        bursty.keyBy(b -> "global_f2e").flatMap(new Feature2Event()).name("Feature->Event").print().name("Print");
         env.execute("BurstyEventDetection");
     }
 }
