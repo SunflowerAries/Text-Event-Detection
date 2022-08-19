@@ -5,6 +5,8 @@ import model.HotPeriod;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
+import org.apache.flink.api.common.state.ValueState;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
 
@@ -34,65 +36,66 @@ public class Feature2Event extends RichFlatMapFunction<Feature, HotPeriod> {
         List<Event> events = new ArrayList<Event>();
         List<String> candidates = new ArrayList<String>();
         burstyMap.keys().forEach(candidates::add);
-
         int n = candidates.size();
-        UnionFind union = new UnionFind(n);
-        for (int i = 0; i < n; i++)
-            for (int j = i + 1; j < n; j++) {
-                if (scoreCompare(candidates.get(i), candidates.get(j))) {
-                    union.unite(i, j);
-                }
-            }
-        union.getSet().forEach(burstycluster -> {
-            List<String> cluster = new ArrayList<>();
-            burstycluster.forEach(bIndex -> cluster.add(candidates.get(bIndex)));
-            Event event = new Event(cluster);
-            events.add(event);
-        });
 
-//        Event hotEvent = hotPeriod(events);
-        for (Event event : events) {
-            try {
-                if (!hotEvents.contains(event.toString())) {
-                    hotEvents.put(event.toString(), true);
-                    if (event.features.size() > 1) {
-                        // bursty feature
-                        String startTime = "2020-12-31", endTime = "2020-10-01";
-                        for (String feature : event.features) {
-                            try {
-                                // keyset date
-                                for (String date : burstyMap.get(feature).occurrence.keySet()) {
-                                    if (date.compareTo(startTime) < 0)
-                                        startTime = date;
-                                    if (date.compareTo(endTime) > 0)
-                                        endTime = date;
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
-                        String date = startTime;
-                        double score = 0, tmpscore = 0;
-                        while (!date.equals(endTime)) {
+        if (n % 256 == 0) {
+            UnionFind union = new UnionFind(n);
+            for (int i = 0; i < n; i++)
+                for (int j = i + 1; j < n; j++) {
+                    if (scoreCompare(candidates.get(i), candidates.get(j))) {
+                        union.unite(i, j);
+                    }
+                }
+            union.getSet().forEach(burstycluster -> {
+                List<String> cluster = new ArrayList<>();
+                burstycluster.forEach(bIndex -> cluster.add(candidates.get(bIndex)));
+                Event event = new Event(cluster);
+                events.add(event);
+            });
+
+            for (Event event : events) {
+                try {
+                    if (!hotEvents.contains(event.toString())) {
+                        hotEvents.put(event.toString(), true);
+                        if (event.features.size() > 1) {
+                            // bursty feature
+                            String startTime = "2020-12-31", endTime = "2020-10-01";
                             for (String feature : event.features) {
                                 try {
-                                    if (burstyMap.get(feature).occurrence.get(date) != null)
-                                        tmpscore = burstyMap.get(feature).occurrence.get(date).getScore();
-                                    else
-                                        tmpscore = 0;
-                                    score += tmpscore;
+                                    // keyset date
+                                    for (String date : burstyMap.get(feature).occurrence.keySet()) {
+                                        if (date.compareTo(startTime) < 0)
+                                            startTime = date;
+                                        if (date.compareTo(endTime) > 0)
+                                            endTime = date;
+                                    }
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
                             }
-                            if (score / event.features.size() > hotPeriodThreshold)
-                                out.collect(new HotPeriod(date, event.features));
-                            date = LocalDate.parse(date, formatter).plusDays(1).toString();
+                            String date = startTime;
+                            double score = 0, tmpscore = 0;
+                            while (!date.equals(endTime)) {
+                                for (String feature : event.features) {
+                                    try {
+                                        if (burstyMap.get(feature).occurrence.get(date) != null)
+                                            tmpscore = burstyMap.get(feature).occurrence.get(date).getScore();
+                                        else
+                                            tmpscore = 0;
+                                        score += tmpscore;
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                                if (score / event.features.size() > hotPeriodThreshold)
+                                    out.collect(new HotPeriod(date, event.features));
+                                date = LocalDate.parse(date, formatter).plusDays(1).toString();
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }
